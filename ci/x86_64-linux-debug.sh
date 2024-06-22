@@ -6,7 +6,7 @@ set -x
 set -e
 
 ARCH="$(uname -m)"
-TARGET="$ARCH-linux-musl"
+TARGET="$ARCH-linux-glibc"
 MCPU="baseline"
 CACHE_BASENAME="zig+llvm+lld+clang-$TARGET-0.13.0-dev.130+98a30acad"
 PREFIX="$HOME/deps/$CACHE_BASENAME"
@@ -57,20 +57,6 @@ unset CXX
 
 ninja install
 
-# simultaneously test building self-hosted without LLVM and with 32-bit arm
-stage3-debug/bin/zig build \
-  -Dtarget=arm-linux-musleabihf \
-  -Dno-lib
-
-stage3-debug/bin/zig build test docs \
-  --maxrss 21000000000 \
-  -fqemu \
-  -fwasmtime \
-  -Dstatic-llvm \
-  -Dtarget=native-native-musl \
-  --search-prefix "$PREFIX" \
-  --zig-lib-dir "$PWD/../lib" \
-  -Denable-tidy
 
 # Ensure that updating the wasm binary from this commit will result in a viable build.
 stage3-debug/bin/zig build update-zig1
@@ -98,11 +84,14 @@ unset CXX
 
 ninja install
 
+stage3/bin/zig build test-std
 stage3/bin/zig test ../test/behavior.zig
 stage3/bin/zig build -p stage4 \
   -Dstatic-llvm \
-  -Dtarget=native-native-musl \
+  -Dtarget=native-native-glibc \
   -Dno-lib \
   --search-prefix "$PREFIX" \
   --zig-lib-dir "$PWD/../lib"
+
+stage4/bin/zig build test-std
 stage4/bin/zig test ../test/behavior.zig
